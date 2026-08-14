@@ -3,43 +3,47 @@
 @section('content')
 <div class="row justify-content-center">
     <div class="col-md-6">
-        <h1 class="mb-4">Register</h1>
+        <h1 class="mb-4">{{ __('ui.register') }}</h1>
 
-        @if ($errors->any())
-            <div class="alert alert-danger">
-                <ul class="mb-0">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
-
-        <form method="POST" action="{{ route('register') }}">
+        <form method="POST" action="{{ route('register') }}" novalidate>
             @csrf
             <div class="mb-3">
-                <label class="form-label" for="name">Name</label>
+                <label class="form-label" for="name">{{ __('ui.name') }}</label>
                 <input id="name" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name') }}" required autofocus>
+                @error('name')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
             </div>
             <div class="mb-3">
-                <label class="form-label" for="email">Email</label>
+                <label class="form-label" for="email">{{ __('ui.email') }}</label>
                 <input id="email" name="email" type="email" class="form-control @error('email') is-invalid @enderror" value="{{ old('email') }}" required>
+                @error('email')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
             </div>
             <div class="mb-3">
-                <label class="form-label" for="password">Password</label>
+                <label class="form-label" for="password">{{ __('ui.password') }}</label>
                 <input id="password" name="password" type="password" class="form-control @error('password') is-invalid @enderror" required minlength="8">
-                <div class="form-text">Minimum 8 characters.</div>
+                @error('password')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+                @unless($errors->has('password'))
+                    <div class="form-text">{{ __('ui.password_min') }}</div>
+                @endunless
             </div>
             <div class="mb-3">
-                <label class="form-label" for="password_confirmation">Confirm password</label>
-                <input id="password_confirmation" name="password_confirmation" type="password" class="form-control" required minlength="8">
+                <label class="form-label" for="password_confirmation">{{ __('ui.confirm_password') }}</label>
+                <input id="password_confirmation" name="password_confirmation" type="password" class="form-control @error('password_confirmation') is-invalid @enderror" required minlength="8">
+                @error('password_confirmation')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
             </div>
-            <button type="submit" class="btn btn-primary">Register</button>
+            <button type="submit" class="btn btn-primary">{{ __('ui.register') }}</button>
         </form>
 
         <p class="mt-3 mb-0">
-            Already have an account?
-            <a href="{{ route('login') }}">Login</a>
+            {{ __('ui.already_have_account') }}
+            <a href="{{ route('login') }}">{{ __('ui.login') }}</a>
         </p>
     </div>
 </div>

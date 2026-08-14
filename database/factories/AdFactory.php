@@ -17,7 +17,7 @@ class AdFactory extends Factory
             'title' => $this->faker->sentence(3),
             'description' => $this->faker->paragraph(),
             'price' => $this->faker->numberBetween(100, 5000),
-            'category' => 'Prodaja',
+            'category' => 'sale',
             'location' => $this->faker->city(),
             'contact_info' => $this->faker->email(),
             'status' => 'pending',

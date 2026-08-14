@@ -11,6 +11,11 @@ class Ad extends Model
 {
     use HasFactory;
 
+    public const CATEGORIES = [
+        'sale',
+        'services',
+    ];
+
     protected $fillable = [
         'user_id',
         'title',
@@ -30,5 +35,10 @@ class Ad extends Model
     public function images(): HasMany
     {
         return $this->hasMany(AdImage::class);
+    }
+
+    public function translatedCategory(): string
+    {
+        return __('categories.'.$this->category);
     }
 }

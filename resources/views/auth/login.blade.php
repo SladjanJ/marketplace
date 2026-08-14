@@ -3,34 +3,33 @@
 @section('content')
 <div class="row justify-content-center">
     <div class="col-md-6">
-        <h1 class="mb-4">Login</h1>
+        <h1 class="mb-4">{{ __('ui.login') }}</h1>
 
-        @if ($errors->any())
-            <div class="alert alert-danger">
-                <ul class="mb-0">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
-
-        <form method="POST" action="{{ route('login') }}">
+        <form method="POST" action="{{ route('login') }}" novalidate>
             @csrf
             <div class="mb-3">
-                <label class="form-label" for="email">Email</label>
+                <label class="form-label" for="email">{{ __('ui.email') }}</label>
                 <input id="email" name="email" type="email" class="form-control @error('email') is-invalid @enderror" value="{{ old('email') }}" required autofocus>
+                @error('email')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
             </div>
             <div class="mb-3">
-                <label class="form-label" for="password">Password</label>
+                <label class="form-label" for="password">{{ __('ui.password') }}</label>
                 <input id="password" name="password" type="password" class="form-control @error('password') is-invalid @enderror" required>
+                @error('password')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+                <div class="mt-2">
+                    <a href="{{ route('password.request') }}">{{ __('ui.forgot_password') }}</a>
+                </div>
             </div>
-            <button type="submit" class="btn btn-primary">Login</button>
+            <button type="submit" class="btn btn-primary">{{ __('ui.login') }}</button>
         </form>
 
         <p class="mt-3 mb-0">
-            Need an account?
-            <a href="{{ route('register') }}">Register</a>
+            {{ __('ui.need_account') }}
+            <a href="{{ route('register') }}">{{ __('ui.register') }}</a>
         </p>
     </div>
 </div>

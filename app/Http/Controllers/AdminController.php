@@ -18,13 +18,13 @@ class AdminController extends Controller
     {
         $ad->update(['status' => 'approved']);
 
-        return redirect()->route('admin.dashboard')->with('success', 'Ad approved.');
+        return redirect()->route('admin.dashboard')->with('success', __('ui.ad_approved'));
     }
 
     public function reject(Ad $ad)
     {
         $ad->update(['status' => 'rejected']);
 
-        return redirect()->route('admin.dashboard')->with('success', 'Ad rejected.');
+        return redirect()->route('admin.dashboard')->with('success', __('ui.ad_rejected'));
     }
 }

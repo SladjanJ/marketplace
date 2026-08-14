@@ -22,7 +22,7 @@ Aplikacija koristi relacionu bazu podataka sa sledećim entitetima:
 - id — bigint, primary key, auto increment
 - name — string, nullable false
 - email — string, unique, nullable false
-- email_verified_at — timestamp, nullable
+- email_verified_at — timestamp, nullable (Laravel default; email verification nije u upotrebi)
 - password — string, nullable false
 - role — string, default 'user'
 - remember_token — string, nullable

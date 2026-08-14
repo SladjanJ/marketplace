@@ -48,10 +48,9 @@ Osoba koja:
 
 ### 5.1 Autentikacija i pristup
 - korisnik može da se registruje i prijavi,
-- nakon registracije korisnik dobija email sa linkom za verifikaciju naloga,
-- nalog se smatra potvrđenim tek nakon klika na verification link iz emaila,
-- nakon uspešne verifikacije korisnik se preusmerava na početnu (hero) stranicu kao prijavljen korisnik,
-- korisnik mora da bude prijavljen i da ima verifikovan email da bi kreirao oglas,
+- korisnik može da resetuje zaboravljenu lozinku preko email linka,
+- nakon registracije korisnik je odmah prijavljen i može da koristi nalog (bez email verifikacije),
+- korisnik mora da bude prijavljen da bi kreirao oglas,
 - neprijavljeni korisnici mogu da pregledaju oglase,
 - neprijavljeni korisnici ne mogu da kontaktiraju vlasnika oglasa niti da objavljuju oglase,
 - aplikacija mora imati dve uloge: user i admin.
@@ -198,14 +197,13 @@ Prijavljeni korisnici mogu da vide kontakt podatke samo ako su registrovani.
 2. Prvi put vidi popup za izbor jezika.
 3. Može da pregleda oglase bez prijave.
 4. Ako želi da objavi oglas, mora da se registruje.
-5. Nakon registracije dobija email za verifikaciju i vidi obaveštenje da potvrdi nalog.
-6. Klikom na link iz emaila potvrđuje nalog i dolazi na početnu stranicu kao prijavljen korisnik.
-7. Korisnik kreira oglas sa svim obaveznim poljima.
-8. Oglas ide u status pending.
-9. Admin pregledava i odobrava ili odbija oglas.
-10. Ako je odobren, oglas postaje javno dostupan.
-11. Korisnik može da uređuje svoj oglas i da menja podatke kao što je cena ili opis.
-12. Korisnik može da vidi sve svoje oglase u profilu.
+5. Nakon registracije je odmah prijavljen i može da koristi nalog.
+6. Korisnik kreira oglas sa svim obaveznim poljima.
+7. Oglas ide u status pending.
+8. Admin pregledava i odobrava ili odbija oglas.
+9. Ako je odobren, oglas postaje javno dostupan.
+10. Korisnik može da uređuje svoj oglas i da menja podatke kao što je cena ili opis.
+11. Korisnik može da vidi sve svoje oglase u profilu.
 
 ### 9.2 Tok administratora
 1. Admin se prijavljuje.
@@ -257,7 +255,7 @@ Dizajn treba da bude:
 ---
 
 ## 11. Bezbednosni zahtevi
-- samo prijavljeni i email-verifikovani korisnici mogu da objavljuju oglase,
+- samo prijavljeni korisnici mogu da objavljuju oglase,
 - korisnik može da uređuje i briše samo svoje oglase,
 - admin ima pristup svim oglasima,
 - validacija svih polja,
@@ -269,7 +267,6 @@ Dizajn treba da bude:
 ## 12. MVP funkcionalnosti
 U prvoj verziji implementirati sledeće:
 - registracija i prijava,
-- email verifikacija naloga nakon registracije,
 - uloge user i admin,
 - kreiranje oglasa,
 - prikaz liste oglasa,
@@ -305,9 +302,9 @@ Ovo neće biti deo prve verzije:
 
 ### Faza 2 — Autentikacija i role
 - registracija i prijava,
-- email verifikacija (slanje maila, potvrda linkom, redirect na početnu),
+- reset zaboravljene lozinke preko email linka,
 - role user/admin,
-- middleware za pristup (`auth`, `verified`, `admin`).
+- middleware za pristup (`auth`, `admin`).
 
 ### Faza 3 — CRUD oglasi
 - kreiranje oglasa,
@@ -340,10 +337,9 @@ Ovo neće biti deo prve verzije:
 ## 15. Acceptance criteria
 Aplikacija se smatra uspešno implementiranom kada:
 - korisnik može da se registruje i prijavi,
-- nakon registracije korisnik dobija email i mora da potvrdi nalog klikom na link,
-- nakon verifikacije korisnik stiže na početnu stranicu kao prijavljen,
+- nakon registracije korisnik je odmah prijavljen,
 - korisnik može da pregleda oglase bez prijave,
-- prijavljeni i verifikovani korisnik može da kreira oglas,
+- prijavljeni korisnik može da kreira oglas,
 - korisnik može da uređuje i briše svoj oglas,
 - admin može da odobri ili odbije oglas,
 - prikazan je profil korisnika sa njegovim oglasima,

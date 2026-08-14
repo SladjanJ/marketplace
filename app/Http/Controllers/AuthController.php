@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Support\LocaleManager;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
@@ -19,32 +20,28 @@ class AuthController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'confirmed', 'min:8'],
+            'password' => ['required', 'string', 'min:8'],
+            'password_confirmation' => ['required', 'same:password'],
         ]);
+
+        $locale = $request->session()->get('locale_chosen')
+            ? $request->session()->get('locale')
+            : null;
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => $validated['password'],
             'role' => 'user',
+            'locale' => LocaleManager::isSupported($locale) ? $locale : null,
         ]);
 
         Auth::login($user);
         $request->session()->regenerate();
 
-        try {
-            $user->sendEmailVerificationNotification();
-        } catch (\Throwable $e) {
-            report($e);
-
-            return redirect()
-                ->route('verification.notice')
-                ->with('error', 'Account created, but the verification email could not be sent. Use Resend on this page or check mail settings.');
-        }
-
         return redirect()
-            ->route('verification.notice')
-            ->with('success', 'Account created. Please check your email and click the verification link.');
+            ->route('ads.index')
+            ->with('success', __('ui.account_created'));
     }
 
     public function showLogin()
@@ -61,16 +58,18 @@ class AuthController extends Controller
 
         if (! Auth::attempt($credentials, $request->boolean('remember'))) {
             throw ValidationException::withMessages([
-                'email' => 'The provided credentials do not match our records.',
+                'email' => __('auth.failed'),
             ]);
         }
 
         $request->session()->regenerate();
 
-        if (! $request->user()->hasVerifiedEmail()) {
-            return redirect()
-                ->route('verification.notice')
-                ->with('error', 'Please verify your email before continuing.');
+        $user = $request->user();
+
+        if (LocaleManager::isSupported($user->locale)) {
+            LocaleManager::apply($request, $user->locale);
+        } elseif ($request->session()->get('locale_chosen') && LocaleManager::isSupported($request->session()->get('locale'))) {
+            $user->update(['locale' => $request->session()->get('locale')]);
         }
 
         return redirect()->intended(route('ads.index'));
@@ -83,6 +82,6 @@ class AuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('ads.index')->with('success', 'You have been logged out.');
+        return redirect()->route('ads.index')->with('success', __('ui.logged_out'));
     }
 }

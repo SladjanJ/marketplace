@@ -55,24 +55,17 @@ Aplikacija će biti organizovana kao standardni Laravel MVC aplikacioni sistem s
 ## 4. Glavne module
 
 ### 4.1 Autentikacija
-- Laravel built-in auth sistem
+- Laravel custom auth (session)
 - registracija i prijava
-- email verifikacija (`MustVerifyEmail`, signed link)
-- role-based access control
+- password reset preko email linka
+- role-based access control (`user` / `admin`)
+- email verification **nije** u upotrebi (registracija odmah aktivira nalog)
 
-### 4.1.1 Email (Resend)
-Za slanje verification mailova koristiti Resend:
-- `composer require resend/resend-php`
-- `MAIL_MAILER=resend`
-- `RESEND_KEY` = API key iz Resend dashboarda
-- `MAIL_FROM_ADDRESS` = `onboarding@resend.dev` (test) ili verifikovani domain (produkcija)
-- `MAIL_FROM_NAME` = Marketplace
-- `APP_URL` mora da odgovara URL-u aplikacije (npr. `http://127.0.0.1:8000`)
+Mail (za password reset):
+- lokalno: `MAIL_MAILER=log` ili SMTP (Resend / hosting)
+- produkcija: hosting SMTP ili Resend sa verified domain
 
-Na free / test planu `onboarding@resend.dev` često šalje samo na email vezan za Resend nalog.
-Za slanje na bilo koji inbox treba verified domain u Resendu.
-
-Nakon izmene `.env`: `php artisan config:clear`
+After `.env` changes: `php artisan config:clear`
 
 ### 4.2 Oglasi
 - CRUD operacije za oglase
@@ -121,6 +114,12 @@ Nakon izmene `.env`: `php artisan config:clear`
 - GET / — početna stranica
 - GET /ads — lista oglasa
 - GET /ads/{id} — detalji oglasa
+
+### Auth / password reset rute
+- GET /forgot-password — forma za zahtev reset linka
+- POST /forgot-password — slanje reset maila
+- GET /reset-password/{token} — forma za novu lozinku
+- POST /reset-password — čuvanje nove lozinke
 
 ### Autentifikovane rute
 - GET /ads/create — forma za kreiranje oglasa

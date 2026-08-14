@@ -3,22 +3,25 @@
 namespace App\Http\Controllers;
 
 use App\Models\Ad;
-use App\Models\AdImage;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class AdController extends Controller
 {
     public function index()
     {
-        $ads = Ad::with('images')->latest()->get();
+        $ads = Ad::with('images')
+            ->where('status', 'approved')
+            ->latest()
+            ->get();
 
         return view('ads.index', compact('ads'));
     }
 
     public function create()
     {
-        return view('ads.create');
+        return view('ads.create', [
+            'categories' => Ad::CATEGORIES,
+        ]);
     }
 
     public function store(Request $request)
@@ -26,12 +29,13 @@ class AdController extends Controller
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
-            'price' => ['required', 'numeric'],
-            'category' => ['required', 'string'],
-            'location' => ['required', 'string'],
-            'contact_info' => ['required', 'string'],
+            'price' => ['required', 'numeric', 'min:0'],
+            'category' => ['required', 'string', 'in:'.implode(',', Ad::CATEGORIES)],
+            'location' => ['required', 'string', 'max:255'],
+            'contact_email' => ['required', 'email', 'max:255'],
+            'contact_phone' => ['required', 'string', 'max:50'],
             'images' => ['required', 'array', 'min:1', 'max:4'],
-            'images.*' => ['file', 'mimes:jpg,jpeg,png,webp'],
+            'images.*' => ['file', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
         ]);
 
         $ad = $request->user()->ads()->create([
@@ -40,7 +44,7 @@ class AdController extends Controller
             'price' => $validated['price'],
             'category' => $validated['category'],
             'location' => $validated['location'],
-            'contact_info' => $validated['contact_info'],
+            'contact_info' => $validated['contact_email'].' · '.$validated['contact_phone'],
             'status' => 'pending',
         ]);
 
@@ -49,6 +53,8 @@ class AdController extends Controller
             $ad->images()->create(['path' => $path]);
         }
 
-        return redirect()->route('ads.index')->with('success', 'Ad created successfully.');
+        return redirect()
+            ->route('ads.index')
+            ->with('success', __('ui.ad_submitted'));
     }
 }

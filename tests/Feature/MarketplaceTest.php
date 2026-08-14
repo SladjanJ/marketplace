@@ -4,22 +4,21 @@ namespace Tests\Feature;
 
 use App\Models\Ad;
 use App\Models\User;
-use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
 class MarketplaceTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_registration_requires_email_verification(): void
+    public function test_user_can_register_and_is_logged_in(): void
     {
-        Notification::fake();
-
         $response = $this->post('/register', [
             'name' => 'Test User',
             'email' => 'test@example.com',
@@ -27,14 +26,12 @@ class MarketplaceTest extends TestCase
             'password_confirmation' => 'password123',
         ]);
 
-        $response->assertRedirect(route('verification.notice'));
+        $response->assertRedirect(route('ads.index'));
         $this->assertAuthenticated();
-
-        $user = User::where('email', 'test@example.com')->first();
-        $this->assertNotNull($user);
-        $this->assertNull($user->email_verified_at);
-
-        Notification::assertSentTo($user, VerifyEmail::class);
+        $this->assertDatabaseHas('users', [
+            'email' => 'test@example.com',
+            'name' => 'Test User',
+        ]);
     }
 
     public function test_registration_validation_errors_are_shown(): void
@@ -47,27 +44,11 @@ class MarketplaceTest extends TestCase
         ]);
 
         $response->assertRedirect('/register');
-        $response->assertSessionHasErrors(['email', 'password']);
+        $response->assertSessionHasErrors(['email', 'password', 'password_confirmation']);
         $this->assertGuest();
     }
 
-    public function test_user_can_verify_email_and_land_on_home(): void
-    {
-        $user = User::factory()->unverified()->create();
-
-        $verificationUrl = URL::temporarySignedRoute(
-            'verification.verify',
-            now()->addMinutes(60),
-            ['id' => $user->id, 'hash' => sha1($user->email)]
-        );
-
-        $response = $this->actingAs($user)->get($verificationUrl);
-
-        $response->assertRedirect(route('ads.index'));
-        $this->assertTrue($user->fresh()->hasVerifiedEmail());
-    }
-
-    public function test_verified_user_can_login_and_logout(): void
+    public function test_user_can_login_and_logout(): void
     {
         $user = User::factory()->create([
             'email' => 'login@example.com',
@@ -87,44 +68,6 @@ class MarketplaceTest extends TestCase
         $this->assertGuest();
     }
 
-    public function test_unverified_user_is_sent_to_verification_notice_on_login(): void
-    {
-        $user = User::factory()->unverified()->create([
-            'email' => 'pending@example.com',
-            'password' => 'password123',
-        ]);
-
-        $response = $this->post('/login', [
-            'email' => 'pending@example.com',
-            'password' => 'password123',
-        ]);
-
-        $response->assertRedirect(route('verification.notice'));
-        $this->assertAuthenticatedAs($user);
-    }
-
-    public function test_unverified_user_cannot_create_an_ad(): void
-    {
-        Storage::fake('public');
-
-        $user = User::factory()->unverified()->create(['role' => 'user']);
-
-        $response = $this->actingAs($user)->post('/ads', [
-            'title' => 'Vintage bike',
-            'description' => 'Great condition',
-            'price' => 120,
-            'category' => 'Prodaja',
-            'location' => 'Belgrade',
-            'contact_info' => 'Call me',
-            'images' => [
-                UploadedFile::fake()->create('bike-1.jpg', 100, 'image/jpeg'),
-            ],
-        ]);
-
-        $response->assertRedirect(route('verification.notice'));
-        $this->assertDatabaseCount('ads', 0);
-    }
-
     public function test_authenticated_user_can_create_an_ad_with_images(): void
     {
         Storage::fake('public');
@@ -135,17 +78,101 @@ class MarketplaceTest extends TestCase
             'title' => 'Vintage bike',
             'description' => 'Great condition',
             'price' => 120,
-            'category' => 'Prodaja',
+            'category' => 'sale',
             'location' => 'Belgrade',
-            'contact_info' => 'Call me',
+            'contact_email' => 'seller@example.com',
+            'contact_phone' => '0601234567',
             'images' => [
                 UploadedFile::fake()->create('bike-1.jpg', 100, 'image/jpeg'),
             ],
         ]);
 
-        $response->assertRedirect();
-        $this->assertDatabaseHas('ads', ['title' => 'Vintage bike', 'user_id' => $user->id]);
+        $response->assertRedirect(route('ads.index'));
+        $this->assertDatabaseHas('ads', [
+            'title' => 'Vintage bike',
+            'user_id' => $user->id,
+            'status' => 'pending',
+            'contact_info' => 'seller@example.com · 0601234567',
+        ]);
         $this->assertDatabaseCount('ad_images', 1);
+    }
+
+    public function test_guest_is_redirected_from_create_ad_page(): void
+    {
+        $this->get(route('ads.create'))->assertRedirect(route('login'));
+    }
+
+    public function test_authenticated_user_can_view_create_ad_form(): void
+    {
+        $user = User::factory()->create(['role' => 'user']);
+
+        $this->actingAs($user)
+            ->get(route('ads.create'))
+            ->assertOk()
+            ->assertSee('Create a new ad')
+            ->assertSee('Submit for review');
+    }
+
+    public function test_home_page_shows_create_ad_call_to_action(): void
+    {
+        $this->get(route('ads.index'))
+            ->assertOk()
+            ->assertSee('Create a new ad')
+            ->assertSee('New ad');
+    }
+
+    public function test_home_page_lists_only_approved_ads(): void
+    {
+        Ad::factory()->create(['title' => 'Approved bike', 'status' => 'approved']);
+        Ad::factory()->create(['title' => 'Pending bike', 'status' => 'pending']);
+
+        $this->get(route('ads.index'))
+            ->assertOk()
+            ->assertSee('Approved bike')
+            ->assertDontSee('Pending bike');
+    }
+
+    public function test_user_can_request_password_reset_link(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create(['email' => 'reset@example.com']);
+
+        $response = $this->from('/forgot-password')->post('/forgot-password', [
+            'email' => 'reset@example.com',
+        ]);
+
+        $response->assertRedirect('/forgot-password');
+        $response->assertSessionHas('success');
+        Notification::assertSentTo($user, ResetPassword::class);
+    }
+
+    public function test_user_can_reset_password_with_valid_token(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'reset2@example.com',
+            'password' => 'old-password',
+        ]);
+
+        $token = Password::broker()->createToken($user);
+
+        $response = $this->post('/reset-password', [
+            'token' => $token,
+            'email' => 'reset2@example.com',
+            'password' => 'new-password',
+            'password_confirmation' => 'new-password',
+        ]);
+
+        $response->assertRedirect(route('login'));
+        $this->assertTrue(Hash::check('new-password', $user->fresh()->password));
+    }
+
+    public function test_login_page_has_forgot_password_link(): void
+    {
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertSee('Forgot password?')
+            ->assertSee(route('password.request'), false);
     }
 
     public function test_admin_can_approve_a_pending_ad(): void
@@ -158,5 +185,91 @@ class MarketplaceTest extends TestCase
 
         $response->assertRedirect();
         $this->assertDatabaseHas('ads', ['id' => $ad->id, 'status' => 'approved']);
+    }
+
+    public function test_first_visit_shows_language_popup(): void
+    {
+        $this->get(route('ads.index'))
+            ->assertOk()
+            ->assertSee('Choose your language / Izaberite jezik')
+            ->assertSee('languageModal', false);
+    }
+
+    public function test_guest_can_switch_entire_ui_to_serbian(): void
+    {
+        $this->from('/')->post(route('locale.update'), ['locale' => 'sr']);
+
+        $this->get(route('ads.index'))
+            ->assertOk()
+            ->assertSee('Najnoviji oglasi')
+            ->assertSee('Novi oglas')
+            ->assertSee('Prijava')
+            ->assertDontSee('Latest ads')
+            ->assertDontSee('languageModal', false);
+    }
+
+    public function test_closing_language_popup_keeps_english_and_hides_it(): void
+    {
+        $this->from('/')->post(route('locale.update'), ['locale' => 'en']);
+
+        $this->get(route('ads.index'))
+            ->assertOk()
+            ->assertSee('Latest ads')
+            ->assertSee('New ad')
+            ->assertDontSee('languageModal', false);
+    }
+
+    public function test_create_ad_categories_follow_selected_language(): void
+    {
+        $user = User::factory()->create(['role' => 'user']);
+
+        $this->actingAs($user)
+            ->get(route('ads.create'))
+            ->assertOk()
+            ->assertSee('Category')
+            ->assertSee('Sale')
+            ->assertSee('Services');
+
+        $this->actingAs($user)
+            ->from('/')
+            ->post(route('locale.update'), ['locale' => 'sr']);
+
+        $this->actingAs($user)
+            ->get(route('ads.create'))
+            ->assertOk()
+            ->assertSee('Kategorija')
+            ->assertSee('Prodaja')
+            ->assertSee('Usluge')
+            ->assertSee('Izaberi kategoriju');
+    }
+
+    public function test_guest_is_redirected_from_profile(): void
+    {
+        $this->get(route('profile.show'))->assertRedirect(route('login'));
+    }
+
+    public function test_authenticated_user_can_change_language_from_profile(): void
+    {
+        $user = User::factory()->create(['role' => 'user']);
+
+        $this->actingAs($user)
+            ->get(route('profile.show'))
+            ->assertOk()
+            ->assertSee('Settings')
+            ->assertSee('Language');
+
+        $this->actingAs($user)
+            ->from(route('profile.show'))
+            ->post(route('locale.update'), ['locale' => 'sr'])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertSame('sr', $user->fresh()->locale);
+
+        $this->actingAs($user)
+            ->get(route('profile.show'))
+            ->assertOk()
+            ->assertSee('Podešavanja')
+            ->assertSee('Jezik');
     }
 }
