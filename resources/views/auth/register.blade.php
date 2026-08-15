@@ -23,20 +23,19 @@
             </div>
             <div class="mb-3">
                 <label class="form-label" for="password">{{ __('ui.password') }}</label>
-                <input id="password" name="password" type="password" class="form-control @error('password') is-invalid @enderror" required minlength="8">
-                @error('password')
-                    <div class="invalid-feedback">{{ $message }}</div>
-                @enderror
+                @include('partials.password-input', ['minlength' => 8, 'autocomplete' => 'new-password'])
                 @unless($errors->has('password'))
                     <div class="form-text">{{ __('ui.password_min') }}</div>
                 @endunless
             </div>
             <div class="mb-3">
                 <label class="form-label" for="password_confirmation">{{ __('ui.confirm_password') }}</label>
-                <input id="password_confirmation" name="password_confirmation" type="password" class="form-control @error('password_confirmation') is-invalid @enderror" required minlength="8">
-                @error('password_confirmation')
-                    <div class="invalid-feedback">{{ $message }}</div>
-                @enderror
+                @include('partials.password-input', [
+                    'id' => 'password_confirmation',
+                    'name' => 'password_confirmation',
+                    'minlength' => 8,
+                    'autocomplete' => 'new-password',
+                ])
             </div>
             <button type="submit" class="btn btn-primary">{{ __('ui.register') }}</button>
         </form>

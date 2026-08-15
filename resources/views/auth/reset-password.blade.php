@@ -21,15 +21,17 @@
             </div>
             <div class="mb-3">
                 <label class="form-label" for="password">{{ __('ui.new_password') }}</label>
-                <input id="password" name="password" type="password" class="form-control @error('password') is-invalid @enderror" required minlength="8">
+                @include('partials.password-input', ['minlength' => 8, 'autocomplete' => 'new-password'])
                 <div class="form-text">{{ __('ui.password_min') }}</div>
-                @error('password')
-                    <div class="invalid-feedback">{{ $message }}</div>
-                @enderror
             </div>
             <div class="mb-3">
                 <label class="form-label" for="password_confirmation">{{ __('ui.confirm_new_password') }}</label>
-                <input id="password_confirmation" name="password_confirmation" type="password" class="form-control" required minlength="8">
+                @include('partials.password-input', [
+                    'id' => 'password_confirmation',
+                    'name' => 'password_confirmation',
+                    'minlength' => 8,
+                    'autocomplete' => 'new-password',
+                ])
             </div>
             <button type="submit" class="btn btn-primary">{{ __('ui.save_new_password') }}</button>
         </form>

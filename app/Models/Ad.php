@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,6 +24,12 @@ class Ad extends Model
         'paused' => ['approved', 'sold'],
     ];
 
+    public const SORTS = [
+        'newest',
+        'price_asc',
+        'price_desc',
+    ];
+
     protected $fillable = [
         'user_id',
         'title',
@@ -42,6 +49,43 @@ class Ad extends Model
     public function images(): HasMany
     {
         return $this->hasMany(AdImage::class);
+    }
+
+    /**
+     * @param  Builder<Ad>  $query
+     * @param  array{q?: string|null, category?: string|null, location?: string|null, min_price?: mixed, max_price?: mixed}  $filters
+     * @return Builder<Ad>
+     */
+    public function scopeFiltered(Builder $query, array $filters): Builder
+    {
+        return $query
+            ->when($filters['q'] ?? null, function (Builder $query, string $term) {
+                $like = '%'.$this->escapeLike($term).'%';
+
+                $query->where(function (Builder $inner) use ($like) {
+                    $inner->where('title', 'like', $like)
+                        ->orWhere('description', 'like', $like);
+                });
+            })
+            ->when($filters['category'] ?? null, fn (Builder $query, string $category) => $query->where('category', $category))
+            ->when($filters['location'] ?? null, function (Builder $query, string $location) {
+                $query->where('location', 'like', $this->escapeLike($location).'%');
+            })
+            ->when($this->filledFilter($filters['min_price'] ?? null), fn (Builder $query) => $query->where('price', '>=', $filters['min_price']))
+            ->when($this->filledFilter($filters['max_price'] ?? null), fn (Builder $query) => $query->where('price', '<=', $filters['max_price']));
+    }
+
+    /**
+     * @param  Builder<Ad>  $query
+     * @return Builder<Ad>
+     */
+    public function scopeSorted(Builder $query, ?string $sort): Builder
+    {
+        return match ($sort) {
+            'price_asc' => $query->orderBy('price')->orderByDesc('created_at'),
+            'price_desc' => $query->orderByDesc('price')->orderByDesc('created_at'),
+            default => $query->latest(),
+        };
     }
 
     public function translatedCategory(): string
@@ -100,5 +144,15 @@ class Ad extends Model
             'email' => $parts[0] ?? '',
             'phone' => $parts[1] ?? '',
         ];
+    }
+
+    private function escapeLike(string $value): string
+    {
+        return str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $value);
+    }
+
+    private function filledFilter(mixed $value): bool
+    {
+        return $value !== null && $value !== '';
     }
 }

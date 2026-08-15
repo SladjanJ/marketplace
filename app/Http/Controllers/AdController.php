@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Ad;
+use App\Support\Cities;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -12,12 +13,21 @@ use Illuminate\View\View;
 
 class AdController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
+        $filters = $this->validatedListingFilters($request);
+
         $ads = Ad::with('images')
             ->where('status', 'approved')
-            ->latest()
+            ->filtered($filters)
+            ->sorted($filters['sort'] ?? 'newest')
             ->get();
+
+        $hasFilters = $this->listingHasFilters($filters);
+
+        if ($request->boolean('partial')) {
+            return view('ads.results', compact('ads', 'hasFilters'));
+        }
 
         $myAds = collect();
 
@@ -29,7 +39,18 @@ class AdController extends Controller
                 ->get();
         }
 
-        return view('ads.index', compact('ads', 'myAds'));
+        $locations = Cities::catalog(
+            Ad::query()->where('status', 'approved')->pluck('location')->all()
+        );
+
+        return view('ads.index', [
+            'ads' => $ads,
+            'myAds' => $myAds,
+            'filters' => $filters,
+            'categories' => Ad::CATEGORIES,
+            'hasFilters' => $hasFilters,
+            'locations' => $locations,
+        ]);
     }
 
     public function show(Ad $ad): View
@@ -151,6 +172,52 @@ class AdController extends Controller
         return redirect()
             ->route('ads.index')
             ->with('success', __('ui.ad_deleted'));
+    }
+
+    /**
+     * @return array{q: ?string, category: ?string, location: ?string, min_price: ?string, max_price: ?string, sort: string}
+     */
+    private function validatedListingFilters(Request $request): array
+    {
+        try {
+            $validated = $request->validate([
+                'q' => ['nullable', 'string', 'max:100'],
+                'category' => ['nullable', 'string', Rule::in(Ad::CATEGORIES)],
+                'location' => ['nullable', 'string', 'max:100'],
+                'min_price' => ['nullable', 'numeric', 'min:0'],
+                'max_price' => ['nullable', 'numeric', 'min:0'],
+                'sort' => ['nullable', 'string', Rule::in(Ad::SORTS)],
+            ]);
+        } catch (ValidationException $e) {
+            throw $e->redirectTo(route('ads.index'));
+        }
+
+        return [
+            'q' => $this->blankToNull($validated['q'] ?? null),
+            'category' => $this->blankToNull($validated['category'] ?? null),
+            'location' => $this->blankToNull($validated['location'] ?? null),
+            'min_price' => $this->blankToNull($validated['min_price'] ?? null),
+            'max_price' => $this->blankToNull($validated['max_price'] ?? null),
+            'sort' => $validated['sort'] ?? 'newest',
+        ];
+    }
+
+    /**
+     * @param  array{q: ?string, category: ?string, location: ?string, min_price: ?string, max_price: ?string, sort: string}  $filters
+     */
+    private function listingHasFilters(array $filters): bool
+    {
+        return ($filters['q'] ?? null) !== null
+            || ($filters['category'] ?? null) !== null
+            || ($filters['location'] ?? null) !== null
+            || ($filters['min_price'] ?? null) !== null
+            || ($filters['max_price'] ?? null) !== null
+            || (($filters['sort'] ?? 'newest') !== 'newest');
+    }
+
+    private function blankToNull(mixed $value): mixed
+    {
+        return is_string($value) && trim($value) === '' ? null : $value;
     }
 
     /**

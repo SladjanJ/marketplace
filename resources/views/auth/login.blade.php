@@ -16,10 +16,7 @@
             </div>
             <div class="mb-3">
                 <label class="form-label" for="password">{{ __('ui.password') }}</label>
-                <input id="password" name="password" type="password" class="form-control @error('password') is-invalid @enderror" required>
-                @error('password')
-                    <div class="invalid-feedback">{{ $message }}</div>
-                @enderror
+                @include('partials.password-input', ['autocomplete' => 'current-password'])
                 <div class="mt-2">
                     <a href="{{ route('password.request') }}">{{ __('ui.forgot_password') }}</a>
                 </div>

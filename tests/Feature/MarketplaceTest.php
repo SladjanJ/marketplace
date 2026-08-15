@@ -213,6 +213,138 @@ class MarketplaceTest extends TestCase
             ->assertDontSee('Pending bike');
     }
 
+    public function test_home_page_search_filters_approved_ads_by_title_and_description(): void
+    {
+        Ad::factory()->create(['title' => 'Vintage bike', 'description' => 'Great condition', 'status' => 'approved']);
+        Ad::factory()->create(['title' => 'Office chair', 'description' => 'Almost new', 'status' => 'approved']);
+        Ad::factory()->create(['title' => 'Hidden bike', 'description' => 'Pending review', 'status' => 'pending']);
+
+        $this->get(route('ads.index', ['q' => 'bike']))
+            ->assertOk()
+            ->assertSee('Vintage bike')
+            ->assertDontSee('Office chair')
+            ->assertDontSee('Hidden bike');
+
+        $this->get(route('ads.index', ['q' => 'Almost']))
+            ->assertOk()
+            ->assertSee('Office chair')
+            ->assertDontSee('Vintage bike');
+    }
+
+    public function test_home_page_filters_by_category_location_and_price(): void
+    {
+        Ad::factory()->create([
+            'title' => 'Belgrade bike',
+            'category' => 'sale',
+            'location' => 'Belgrade',
+            'price' => 120,
+            'status' => 'approved',
+        ]);
+        Ad::factory()->create([
+            'title' => 'Novi Sad lesson',
+            'category' => 'services',
+            'location' => 'Novi Sad',
+            'price' => 40,
+            'status' => 'approved',
+        ]);
+        Ad::factory()->create([
+            'title' => 'Expensive bike',
+            'category' => 'sale',
+            'location' => 'Belgrade',
+            'price' => 900,
+            'status' => 'approved',
+        ]);
+
+        $this->get(route('ads.index', ['category' => 'sale']))
+            ->assertOk()
+            ->assertSee('Belgrade bike')
+            ->assertSee('Expensive bike')
+            ->assertDontSee('Novi Sad lesson');
+
+        $this->get(route('ads.index', ['location' => 'Novi']))
+            ->assertOk()
+            ->assertSee('Novi Sad lesson')
+            ->assertDontSee('Belgrade bike');
+
+        $this->get(route('ads.index', ['min_price' => 100, 'max_price' => 200]))
+            ->assertOk()
+            ->assertSee('Belgrade bike')
+            ->assertDontSee('Novi Sad lesson')
+            ->assertDontSee('Expensive bike');
+    }
+
+    public function test_home_page_sorts_approved_ads_by_price(): void
+    {
+        Ad::factory()->create(['title' => 'Cheap bike', 'price' => 50, 'status' => 'approved']);
+        Ad::factory()->create(['title' => 'Mid bike', 'price' => 150, 'status' => 'approved']);
+        Ad::factory()->create(['title' => 'Pricey bike', 'price' => 400, 'status' => 'approved']);
+
+        $this->get(route('ads.index', ['sort' => 'price_asc']))
+            ->assertOk()
+            ->assertSeeInOrder(['Cheap bike', 'Mid bike', 'Pricey bike']);
+
+        $this->get(route('ads.index', ['sort' => 'price_desc']))
+            ->assertOk()
+            ->assertSeeInOrder(['Pricey bike', 'Mid bike', 'Cheap bike']);
+    }
+
+    public function test_home_page_shows_empty_filter_state(): void
+    {
+        Ad::factory()->create(['title' => 'Vintage bike', 'status' => 'approved']);
+
+        $this->get(route('ads.index', ['q' => 'no-such-ad']))
+            ->assertOk()
+            ->assertSee('No ads match these filters')
+            ->assertSee('Clear filters')
+            ->assertDontSee('Vintage bike');
+    }
+
+    public function test_location_suggestions_match_city_prefix(): void
+    {
+        $this->assertContains('Podgorica', \App\Support\Cities::suggest('Pod'));
+        $this->assertContains('Podujevo', \App\Support\Cities::suggest('pod'));
+        $this->assertSame([], \App\Support\Cities::suggest('Po'));
+    }
+
+    public function test_home_page_includes_location_catalog_for_autocomplete(): void
+    {
+        Ad::factory()->create(['title' => 'Custom town bike', 'location' => 'Kolašin', 'status' => 'approved']);
+
+        $this->get(route('ads.index'))
+            ->assertOk()
+            ->assertSee('location-cities', false)
+            ->assertSee('Podgorica', false)
+            ->assertSee('Kolašin', false)
+            ->assertSee('location-suggestions', false);
+    }
+
+    public function test_location_prefix_filters_ads_and_partial_skips_layout(): void
+    {
+        Ad::factory()->create(['title' => 'Podgorica bike', 'location' => 'Podgorica', 'status' => 'approved']);
+        Ad::factory()->create(['title' => 'Belgrade bike', 'location' => 'Beograd', 'status' => 'approved']);
+
+        $this->get(route('ads.index', ['location' => 'Pod']))
+            ->assertOk()
+            ->assertSee('Podgorica bike')
+            ->assertDontSee('Belgrade bike')
+            ->assertSee('Marketplace');
+
+        $this->get(route('ads.index', ['location' => 'Pod', 'partial' => 1]))
+            ->assertOk()
+            ->assertSee('Podgorica bike')
+            ->assertDontSee('Belgrade bike')
+            ->assertDontSee('Marketplace')
+            ->assertDontSee('Latest ads');
+    }
+
+    public function test_invalid_listing_filters_are_rejected(): void
+    {
+        $this->from(route('ads.index'))
+            ->get(route('ads.index', ['category' => 'cars', 'sort' => 'popular']))
+            ->assertRedirect(route('ads.index'))
+            ->assertSessionHasErrors(['category', 'sort']);
+    }
+
     public function test_user_can_request_password_reset_link(): void
     {
         Notification::fake();
@@ -254,6 +386,23 @@ class MarketplaceTest extends TestCase
             ->assertOk()
             ->assertSee('Forgot password?')
             ->assertSee(route('password.request'), false);
+    }
+
+    public function test_password_fields_have_show_hide_toggle(): void
+    {
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertSee('Show password')
+            ->assertSee('password-toggle', false)
+            ->assertSee('bi-eye', false);
+
+        $register = $this->get(route('register'))
+            ->assertOk()
+            ->assertSee('Show password')
+            ->getContent();
+
+        $this->assertSame(1, substr_count($register, 'data-target="password"'));
+        $this->assertSame(1, substr_count($register, 'data-target="password_confirmation"'));
     }
 
     public function test_admin_can_approve_a_pending_ad(): void

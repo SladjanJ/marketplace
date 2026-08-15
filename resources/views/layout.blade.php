@@ -80,6 +80,30 @@
             height: 100%;
             object-fit: cover;
         }
+        .password-toggle {
+            min-width: 2.75rem;
+        }
+        .location-suggest-list {
+            position: absolute;
+            top: calc(100% + .25rem);
+            left: 0;
+            right: 0;
+            z-index: 20;
+            max-height: 14rem;
+            overflow: auto;
+            background: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: .5rem;
+            box-shadow: 0 .5rem 1.25rem rgba(15, 23, 42, .12);
+        }
+        .location-suggest-list li {
+            padding: .5rem .75rem;
+            cursor: pointer;
+        }
+        .location-suggest-list li:hover,
+        .location-suggest-list li.active {
+            background: #eef4ff;
+        }
         @media (max-width: 575.98px) {
             .ad-card-img { height: 180px; }
             .ad-hero-img { height: 240px; }
@@ -170,6 +194,25 @@
 @endif
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener('click', function (event) {
+        const button = event.target.closest('.password-toggle');
+        if (!button) return;
+
+        const input = document.getElementById(button.getAttribute('data-target'));
+        const icon = button.querySelector('i');
+        if (!input) return;
+
+        const show = input.type === 'password';
+        input.type = show ? 'text' : 'password';
+        button.setAttribute('aria-pressed', show ? 'true' : 'false');
+        button.setAttribute('aria-label', show ? button.dataset.hideLabel : button.dataset.showLabel);
+        if (icon) {
+            icon.classList.toggle('bi-eye', !show);
+            icon.classList.toggle('bi-eye-slash', show);
+        }
+    });
+</script>
 @if($needsLanguageChoice ?? false)
 <script>
     document.addEventListener('DOMContentLoaded', function () {
