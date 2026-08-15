@@ -1,91 +1,190 @@
-# Marketplace
+<p align="center">
+  <h1 align="center">PlaceMarket</h1>
+</p>
 
-**Classified ads marketplace with admin moderation — built as a Laravel portfolio MVP.**
+<p align="center">
+  A modern marketplace web application for browsing, publishing, and managing listings.
+</p>
 
-[![PHP](https://img.shields.io/badge/PHP-8.2-777BB4?style=flat-square&logo=php&logoColor=white)](https://www.php.net/)
-[![Laravel](https://img.shields.io/badge/Laravel-12-FF2D20?style=flat-square&logo=laravel&logoColor=white)](https://laravel.com/)
-[![MySQL](https://img.shields.io/badge/MySQL-8-4479A1?style=flat-square&logo=mysql&logoColor=white)](https://www.mysql.com/)
-[![Blade](https://img.shields.io/badge/Blade-templates-FF2D20?style=flat-square&logo=laravel&logoColor=white)](https://laravel.com/docs/blade)
-[![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3-7952B3?style=flat-square&logo=bootstrap&logoColor=white)](https://getbootstrap.com/)
-[![PHPUnit](https://img.shields.io/badge/PHPUnit-11-36648F?style=flat-square)](https://phpunit.de/)
+<p align="center">
+  <img src="https://img.shields.io/badge/Laravel-Framework-red" alt="Laravel">
+  <img src="https://img.shields.io/badge/PHP-Backend-blue" alt="PHP">
+  <img src="https://img.shields.io/badge/Status-In%20Development-orange" alt="Project Status">
+</p>
 
-Marketplace is an MVP web application where **Users** post classified ads and an **Admin** reviews them before they go live. Guests can browse approved listings; only signed-in users can post ads or see seller contact details. There is no chat and no online payment.
+## About PlaceMarket
 
-Languages: **Serbian (SR, Latin)** and **English (EN)**.
+PlaceMarket is a marketplace web application designed for users who want to publish, browse, and manage online listings.
 
----
+The project is being developed as a portfolio project to demonstrate practical skills in modern web application development, including backend development, database management, authentication, application architecture, and user-facing interfaces.
 
-## Table of contents
-
-- [Features](#features)
-- [Tech stack](#tech-stack)
-- [Architecture](#architecture)
-- [User roles & flows](#user-roles--flows)
-- [Business rules](#business-rules)
-- [Routes](#routes)
-- [Getting started](#getting-started)
-- [Environment variables](#environment-variables)
-- [MySQL setup](#mysql-setup)
-- [Database migrations](#database-migrations)
-- [Deployment](#deployment)
-- [Manual testing & demo](#manual-testing--demo)
-- [Security](#security)
-- [Scripts](#scripts)
-- [Roadmap (post-MVP)](#roadmap-post-mvp)
-
----
+The main goal of the project is to create a clean, functional, and scalable foundation for an online marketplace.
 
 ## Features
 
-### Authentication
-- Register and log in (account is active immediately — no email verification)
-- Login, logout, forgot password, reset password via email link
-- Two roles: **user** and **admin**
-- Guests can browse approved ads; posting and contact details require login
+The application includes features that are currently implemented in the project, such as:
 
-### Ads
-- Create, view, edit, and delete your own ads
-- Required fields: title, description, price, category, location, contact email, contact phone, 1–4 photos
-- Categories (MVP): **Sale** / **Prodaja**, **Services** / **Usluge**
-- New ads start as `pending` and wait for admin review
-- Owner can pause a live ad, put it back on sale, or mark it as sold
-- Editing a rejected ad sends it back to `pending`
-- Daily posting limit: **2 ads per user**
-- Image gallery with lightbox on the ad page
+* User authentication
+* Creating and managing listings
+* Browsing available listings
+* Listing categories
+* Listing details
+* User profiles
+* Image handling
+* Database-driven content
+* Responsive user interface
 
-### Admin
-- Dedicated dashboard at `/admin/dashboard`
-- Pending queue with approve / reject
-- Reviewed table for already moderated ads
-- Admin can open any ad (including pending) from the dashboard
+> Features listed above should reflect the current implementation of the project.
 
-### Profile
-- Account name and email
-- Full list of the user’s ads with status badges
-- Language setting (saved on the user record)
+## Tech Stack
 
-### Internationalization
-- First-visit language popup (Serbian / English)
-- Closing the popup keeps English and hides it next time
-- Choice stored in session + cookie; signed-in users also save `users.locale`
-- Language can be changed later in profile settings
-- UI strings, categories, statuses, and validation messages are translated
+The project is built using:
+
+* **Laravel** — backend framework
+* **PHP** — server-side programming language
+* **MySQL** — database
+* **Blade** — templating
+* **CSS / JavaScript** — frontend functionality
+
+Additional technologies and packages may be added as the project evolves.
+
+## Project Structure
+
+The project follows the standard Laravel application structure.
+
+Important directories include:
+
+* `app/` — application logic, models, controllers, and other backend components
+* `config/` — application configuration
+* `database/` — migrations, seeders, and factories
+* `public/` — publicly accessible assets
+* `resources/` — views, frontend assets, and other resources
+* `routes/` — application routes
+* `storage/` — generated files and application storage
+* `tests/` — automated tests
+
+## Installation
+
+Clone the repository:
+
+```bash
+git clone https://github.com/your-username/placemarket.git
+```
+
+Navigate into the project directory:
+
+```bash
+cd placemarket
+```
+
+Install PHP dependencies:
+
+```bash
+composer install
+```
+
+Create the environment file:
+
+```bash
+cp .env.example .env
+```
+
+Generate the Laravel application key:
+
+```bash
+php artisan key:generate
+```
+
+Configure your database credentials inside the `.env` file.
+
+Run the database migrations:
+
+```bash
+php artisan migrate
+```
+
+Install frontend dependencies:
+
+```bash
+npm install
+```
+
+Build the frontend assets:
+
+```bash
+npm run build
+```
+
+Start the local development server:
+
+```bash
+php artisan serve
+```
+
+## Environment Variables
+
+The application uses environment variables for configuration.
+
+Create a `.env` file based on `.env.example` and configure the required values.
+
+**Never commit your `.env` file or private credentials to the repository.**
+
+## Development
+
+For local development, run the Laravel development server:
+
+```bash
+php artisan serve
+```
+
+If frontend assets are being developed, run:
+
+```bash
+npm run dev
+```
+
+## Screenshots
+
+Screenshots of the application can be added here to showcase the main parts of the interface.
+
+Example:
+
+```md
+![PlaceMarket Homepage](screenshots/homepage.png)
+```
+
+## Future Improvements
+
+Potential improvements may include:
+
+* Advanced search and filtering
+* Improved listing management
+* Additional user features
+* Messaging between users
+* Notifications
+* Improved marketplace discovery
+* Additional security and performance improvements
+
+These features are subject to change as the project evolves.
+
+## Contributing
+
+This project is primarily developed as a personal portfolio project.
+
+Suggestions, improvements, and feedback are welcome.
+
+## Security
+
+If you discover a security issue within the application, please avoid publicly posting sensitive information.
+
+Instead, report the issue privately to the project owner.
+
+## License
+
+This project is open-sourced under the MIT license.
 
 ---
 
-## Tech stack
-
-| Layer | Technology |
-|-------|------------|
-| Backend | PHP 8.2, Laravel 12, Eloquent ORM |
-| Auth | Laravel session auth, custom controllers |
-| UI | Blade, Bootstrap 5.3 (CDN), Bootstrap Icons |
-| i18n | Laravel localization (`lang/en`, `lang/sr`) |
-| Database | MySQL (local XAMPP / phpMyAdmin) |
-| Files | `storage/app/public` via `php artisan storage:link` |
-| Tests | PHPUnit 11 feature tests |
-| Tooling | Composer, Vite (available; live UI uses Bootstrap CDN) |
-
----
-
-## Architecture
+<p align="center">
+  Built as a portfolio project with Laravel.
+</p>
