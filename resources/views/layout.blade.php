@@ -40,6 +40,41 @@
             height: 200px;
             object-fit: cover;
         }
+        .ad-list-card {
+            color: inherit;
+            text-decoration: none;
+            transition: box-shadow .15s ease, transform .15s ease;
+        }
+        .ad-list-card:hover,
+        .ad-list-card:focus {
+            box-shadow: 0 0.5rem 1.25rem rgba(15, 23, 42, .12);
+            transform: translateY(-1px);
+            color: inherit;
+        }
+        .ad-hero-img {
+            height: 420px;
+            object-fit: cover;
+            background: #e9ecef;
+        }
+        .ad-hero-trigger {
+            display: block;
+            width: 100%;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            cursor: zoom-in;
+        }
+        .ad-lightbox-img {
+            max-width: 100%;
+            max-height: 90vh;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            border-radius: .5rem;
+        }
+        #adImageLightbox .modal-content {
+            box-shadow: none;
+        }
         .image-preview img {
             width: 100%;
             height: 100%;
@@ -47,6 +82,7 @@
         }
         @media (max-width: 575.98px) {
             .ad-card-img { height: 180px; }
+            .ad-hero-img { height: 240px; }
         }
     </style>
 </head>
@@ -71,7 +107,7 @@
                     @admin
                         <a class="btn btn-outline-light btn-sm" href="{{ route('admin.dashboard') }}">{{ __('ui.admin') }}</a>
                     @endadmin
-                    <a class="btn btn-outline-light btn-sm" href="{{ route('profile.show') }}" aria-label="{{ __('ui.profile') }}">{{ auth()->user()->name }}</a>
+                    <a class="btn btn-outline-light btn-sm" href="{{ route('profile.show') }}">{{ __('ui.profile') }}</a>
                     <form method="POST" action="{{ route('logout') }}" class="d-inline">
                         @csrf
                         <button type="submit" class="btn btn-outline-light btn-sm">{{ __('ui.logout') }}</button>

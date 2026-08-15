@@ -87,7 +87,8 @@ class MarketplaceTest extends TestCase
             ],
         ]);
 
-        $response->assertRedirect(route('ads.index'));
+        $ad = $user->ads()->first();
+        $response->assertRedirect(route('ads.show', $ad));
         $this->assertDatabaseHas('ads', [
             'title' => 'Vintage bike',
             'user_id' => $user->id,
@@ -187,6 +188,33 @@ class MarketplaceTest extends TestCase
         $this->assertDatabaseHas('ads', ['id' => $ad->id, 'status' => 'approved']);
     }
 
+    public function test_approved_ad_leaves_pending_queue_and_appears_in_reviewed_table(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $ad = Ad::factory()->create(['title' => 'Bike to review', 'status' => 'pending']);
+
+        $this->actingAs($admin)
+            ->post('/admin/ads/'.$ad->id.'/approve')
+            ->assertRedirect(route('admin.dashboard'));
+
+        $this->actingAs($admin)
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('No ads are waiting for review.')
+            ->assertSee('Reviewed ads')
+            ->assertSee('Bike to review');
+    }
+
+    public function test_admin_navbar_has_a_single_admin_link(): void
+    {
+        $admin = User::factory()->create(['name' => 'Admin', 'role' => 'admin']);
+
+        $html = $this->actingAs($admin)->get(route('admin.dashboard'))->getContent();
+
+        $this->assertSame(1, substr_count($html, '>'.e(__('ui.admin')).'</a>'));
+        $this->assertStringContainsString(__('ui.profile'), $html);
+    }
+
     public function test_first_visit_shows_language_popup(): void
     {
         $this->get(route('ads.index'))
@@ -271,5 +299,416 @@ class MarketplaceTest extends TestCase
             ->assertOk()
             ->assertSee('Podešavanja')
             ->assertSee('Jezik');
+    }
+
+    public function test_owner_sees_pending_ad_on_home_and_profile(): void
+    {
+        $user = User::factory()->create(['role' => 'user']);
+        $ad = $this->makeAd([
+            'user_id' => $user->id,
+            'title' => 'My pending bike',
+            'status' => 'pending',
+        ]);
+        $this->makeAd([
+            'title' => 'Someone else pending',
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('ads.index'))
+            ->assertOk()
+            ->assertSee('Your ads')
+            ->assertSee('My pending bike')
+            ->assertDontSee('Someone else pending');
+
+        $this->actingAs($user)
+            ->get(route('profile.show'))
+            ->assertOk()
+            ->assertSee('My pending bike')
+            ->assertSee('Pending')
+            ->assertSee(route('ads.show', $ad), false);
+    }
+
+    public function test_guest_can_view_approved_ad_but_not_contact_details(): void
+    {
+        $ad = $this->makeAd([
+            'title' => 'Approved bike',
+            'description' => 'Great condition',
+            'status' => 'approved',
+            'contact_info' => 'seller@example.com · 0601234567',
+        ]);
+
+        $this->get(route('ads.show', $ad))
+            ->assertOk()
+            ->assertSee('Approved bike')
+            ->assertSee('Great condition')
+            ->assertSee('Log in to see the seller')
+            ->assertDontSee('seller@example.com')
+            ->assertDontSee('0601234567');
+    }
+
+    public function test_authenticated_user_can_see_contact_details_on_approved_ad(): void
+    {
+        $viewer = User::factory()->create(['role' => 'user']);
+        $ad = $this->makeAd([
+            'status' => 'approved',
+            'contact_info' => 'seller@example.com · 0601234567',
+        ]);
+
+        $this->actingAs($viewer)
+            ->get(route('ads.show', $ad))
+            ->assertOk()
+            ->assertSee('seller@example.com')
+            ->assertSee('0601234567');
+    }
+
+    public function test_guest_cannot_view_pending_ad(): void
+    {
+        $ad = $this->makeAd(['status' => 'pending', 'title' => 'Hidden pending bike']);
+
+        $this->get(route('ads.show', $ad))->assertForbidden();
+    }
+
+    public function test_owner_can_view_pending_ad(): void
+    {
+        $owner = User::factory()->create(['role' => 'user']);
+        $ad = $this->makeAd(['user_id' => $owner->id, 'status' => 'pending', 'title' => 'My pending bike']);
+
+        $this->actingAs($owner)
+            ->get(route('ads.show', $ad))
+            ->assertOk()
+            ->assertSee('My pending bike')
+            ->assertSee('Pending')
+            ->assertSee('Edit');
+    }
+
+    public function test_admin_can_view_pending_ad_from_dashboard_link(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $ad = $this->makeAd(['status' => 'pending', 'title' => 'Needs review']);
+
+        $this->actingAs($admin)
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee(route('ads.show', $ad), false);
+
+        $this->actingAs($admin)
+            ->get(route('ads.show', $ad))
+            ->assertOk()
+            ->assertSee('Needs review');
+    }
+
+    public function test_home_page_links_to_ad_details(): void
+    {
+        $ad = $this->makeAd(['title' => 'Clickable bike', 'status' => 'approved']);
+
+        $this->get(route('ads.index'))
+            ->assertOk()
+            ->assertSee(route('ads.show', $ad), false);
+    }
+
+    public function test_guest_is_redirected_from_edit_ad_page(): void
+    {
+        $ad = $this->makeAd(['status' => 'approved']);
+
+        $this->get(route('ads.edit', $ad))->assertRedirect(route('login'));
+    }
+
+    public function test_owner_can_update_an_ad(): void
+    {
+        $owner = User::factory()->create(['role' => 'user']);
+        $ad = $this->makeAd([
+            'user_id' => $owner->id,
+            'status' => 'approved',
+            'title' => 'Old title',
+            'contact_info' => 'old@example.com · 0601111111',
+        ]);
+
+        $response = $this->actingAs($owner)->put(route('ads.update', $ad), [
+            'title' => 'New title',
+            'description' => $ad->description,
+            'price' => 250,
+            'category' => 'services',
+            'location' => 'Novi Sad',
+            'contact_email' => 'new@example.com',
+            'contact_phone' => '0609999999',
+        ]);
+
+        $response->assertRedirect(route('ads.show', $ad));
+        $this->assertDatabaseHas('ads', [
+            'id' => $ad->id,
+            'title' => 'New title',
+            'price' => 250,
+            'category' => 'services',
+            'location' => 'Novi Sad',
+            'contact_info' => 'new@example.com · 0609999999',
+            'status' => 'approved',
+        ]);
+    }
+
+    public function test_rejected_ad_returns_to_pending_after_owner_update(): void
+    {
+        $owner = User::factory()->create(['role' => 'user']);
+        $ad = $this->makeAd([
+            'user_id' => $owner->id,
+            'status' => 'rejected',
+            'title' => 'Needs changes',
+        ]);
+
+        $this->actingAs($owner)->put(route('ads.update', $ad), [
+            'title' => 'Fixed title',
+            'description' => $ad->description,
+            'price' => $ad->price,
+            'category' => $ad->category,
+            'location' => $ad->location,
+            'contact_email' => $ad->contactEmail(),
+            'contact_phone' => $ad->contactPhone(),
+        ])->assertRedirect(route('ads.show', $ad));
+
+        $this->assertDatabaseHas('ads', [
+            'id' => $ad->id,
+            'title' => 'Fixed title',
+            'status' => 'pending',
+        ]);
+    }
+
+    public function test_other_user_cannot_update_or_delete_an_ad(): void
+    {
+        $owner = User::factory()->create(['role' => 'user']);
+        $other = User::factory()->create(['role' => 'user']);
+        $ad = $this->makeAd(['user_id' => $owner->id, 'status' => 'approved']);
+
+        $this->actingAs($other)->get(route('ads.edit', $ad))->assertForbidden();
+        $this->actingAs($other)->put(route('ads.update', $ad), [
+            'title' => 'Hacked title',
+            'description' => $ad->description,
+            'price' => $ad->price,
+            'category' => $ad->category,
+            'location' => $ad->location,
+            'contact_email' => 'hack@example.com',
+            'contact_phone' => '0600000000',
+        ])->assertForbidden();
+        $this->actingAs($other)->delete(route('ads.destroy', $ad))->assertForbidden();
+
+        $this->assertDatabaseHas('ads', ['id' => $ad->id, 'title' => $ad->title]);
+    }
+
+    public function test_owner_can_delete_an_ad(): void
+    {
+        Storage::fake('public');
+
+        $owner = User::factory()->create(['role' => 'user']);
+        $ad = $this->makeAd(['user_id' => $owner->id, 'status' => 'approved']);
+        Storage::disk('public')->put('ads/test.jpg', 'fake');
+
+        $this->actingAs($owner)
+            ->delete(route('ads.destroy', $ad))
+            ->assertRedirect(route('ads.index'));
+
+        $this->assertDatabaseMissing('ads', ['id' => $ad->id]);
+        $this->assertDatabaseCount('ad_images', 0);
+        Storage::disk('public')->assertMissing('ads/test.jpg');
+    }
+
+    public function test_owner_can_pause_an_approved_ad(): void
+    {
+        $owner = User::factory()->create(['role' => 'user']);
+        $ad = $this->makeAd([
+            'user_id' => $owner->id,
+            'title' => 'Bike to pause',
+            'status' => 'approved',
+        ]);
+
+        $this->actingAs($owner)
+            ->patch(route('ads.status', $ad), ['status' => 'paused'])
+            ->assertRedirect(route('ads.show', $ad));
+
+        $this->assertDatabaseHas('ads', ['id' => $ad->id, 'status' => 'paused']);
+
+        $this->beGuest()
+            ->get(route('ads.index'))
+            ->assertOk()
+            ->assertDontSee('Bike to pause');
+
+        $this->actingAs($owner)
+            ->get(route('ads.index'))
+            ->assertOk()
+            ->assertSee('Bike to pause');
+    }
+
+    public function test_guest_cannot_view_paused_or_sold_ad(): void
+    {
+        $paused = $this->makeAd(['status' => 'paused', 'title' => 'Hidden paused bike']);
+        $sold = $this->makeAd(['status' => 'sold', 'title' => 'Hidden sold bike']);
+
+        $this->get(route('ads.show', $paused))->assertForbidden();
+        $this->get(route('ads.show', $sold))->assertForbidden();
+    }
+
+    public function test_owner_can_resume_a_paused_ad_without_admin_review(): void
+    {
+        $owner = User::factory()->create(['role' => 'user']);
+        $ad = $this->makeAd([
+            'user_id' => $owner->id,
+            'title' => 'Bike back on sale',
+            'status' => 'paused',
+        ]);
+
+        $this->actingAs($owner)
+            ->patch(route('ads.status', $ad), ['status' => 'approved'])
+            ->assertRedirect(route('ads.show', $ad));
+
+        $this->assertDatabaseHas('ads', ['id' => $ad->id, 'status' => 'approved']);
+
+        $this->get(route('ads.index'))
+            ->assertOk()
+            ->assertSee('Bike back on sale');
+    }
+
+    public function test_owner_can_mark_approved_and_paused_ads_as_sold(): void
+    {
+        $owner = User::factory()->create(['role' => 'user']);
+        $approved = $this->makeAd([
+            'user_id' => $owner->id,
+            'title' => 'Sold from live',
+            'status' => 'approved',
+        ]);
+        $paused = $this->makeAd([
+            'user_id' => $owner->id,
+            'title' => 'Sold from paused',
+            'status' => 'paused',
+        ]);
+
+        $this->actingAs($owner)
+            ->patch(route('ads.status', $approved), ['status' => 'sold'])
+            ->assertRedirect(route('ads.show', $approved));
+        $this->actingAs($owner)
+            ->patch(route('ads.status', $paused), ['status' => 'sold'])
+            ->assertRedirect(route('ads.show', $paused));
+
+        $this->assertDatabaseHas('ads', ['id' => $approved->id, 'status' => 'sold']);
+        $this->assertDatabaseHas('ads', ['id' => $paused->id, 'status' => 'sold']);
+
+        $this->beGuest()
+            ->get(route('ads.index'))
+            ->assertOk()
+            ->assertDontSee('Sold from live')
+            ->assertDontSee('Sold from paused');
+    }
+
+    public function test_owner_cannot_change_sold_or_pending_ad_status(): void
+    {
+        $owner = User::factory()->create(['role' => 'user']);
+        $sold = $this->makeAd(['user_id' => $owner->id, 'status' => 'sold']);
+        $pending = $this->makeAd(['user_id' => $owner->id, 'status' => 'pending']);
+        $rejected = $this->makeAd(['user_id' => $owner->id, 'status' => 'rejected']);
+
+        $this->actingAs($owner)->patch(route('ads.status', $sold), ['status' => 'approved'])->assertForbidden();
+        $this->actingAs($owner)->patch(route('ads.status', $pending), ['status' => 'paused'])->assertForbidden();
+        $this->actingAs($owner)->patch(route('ads.status', $rejected), ['status' => 'sold'])->assertForbidden();
+
+        $this->assertDatabaseHas('ads', ['id' => $sold->id, 'status' => 'sold']);
+        $this->assertDatabaseHas('ads', ['id' => $pending->id, 'status' => 'pending']);
+        $this->assertDatabaseHas('ads', ['id' => $rejected->id, 'status' => 'rejected']);
+    }
+
+    public function test_other_user_and_admin_cannot_change_owner_status(): void
+    {
+        $owner = User::factory()->create(['role' => 'user']);
+        $other = User::factory()->create(['role' => 'user']);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $ad = $this->makeAd(['user_id' => $owner->id, 'status' => 'approved']);
+
+        $this->actingAs($other)->patch(route('ads.status', $ad), ['status' => 'paused'])->assertForbidden();
+        $this->actingAs($admin)->patch(route('ads.status', $ad), ['status' => 'sold'])->assertForbidden();
+
+        $this->assertDatabaseHas('ads', ['id' => $ad->id, 'status' => 'approved']);
+    }
+
+    public function test_owner_sees_status_actions_on_ad_details(): void
+    {
+        $owner = User::factory()->create(['role' => 'user']);
+        $approved = $this->makeAd(['user_id' => $owner->id, 'status' => 'approved']);
+        $paused = $this->makeAd(['user_id' => $owner->id, 'status' => 'paused']);
+        $pending = $this->makeAd(['user_id' => $owner->id, 'status' => 'pending']);
+
+        $approvedHtml = $this->actingAs($owner)
+            ->get(route('ads.show', $approved))
+            ->assertOk()
+            ->assertSeeInOrder(['Pause', 'Mark as sold', 'Edit', 'Delete'])
+            ->assertDontSee('Put back on sale')
+            ->getContent();
+        $this->assertStringContainsString('name="status" value="paused"', $approvedHtml);
+        $this->assertStringContainsString('adImageLightbox', $approvedHtml);
+        $this->assertStringContainsString('Click the photo to view it full size.', $approvedHtml);
+
+        $pausedHtml = $this->actingAs($owner)
+            ->get(route('ads.show', $paused))
+            ->assertOk()
+            ->assertSee('Put back on sale')
+            ->assertSee('Mark as sold')
+            ->getContent();
+        $this->assertStringNotContainsString('name="status" value="paused"', $pausedHtml);
+
+        $pendingHtml = $this->actingAs($owner)
+            ->get(route('ads.show', $pending))
+            ->assertOk()
+            ->assertSee('Pending')
+            ->getContent();
+        $this->assertStringNotContainsString('name="status"', $pendingHtml);
+    }
+
+    public function test_profile_lists_paused_and_sold_ads_with_status(): void
+    {
+        $owner = User::factory()->create(['role' => 'user']);
+        $this->makeAd(['user_id' => $owner->id, 'title' => 'Paused bike', 'status' => 'paused']);
+        $this->makeAd(['user_id' => $owner->id, 'title' => 'Sold bike', 'status' => 'sold']);
+
+        $this->actingAs($owner)
+            ->get(route('profile.show'))
+            ->assertOk()
+            ->assertSee('Paused bike')
+            ->assertSee('Sold bike')
+            ->assertSee('Paused')
+            ->assertSee('Sold');
+    }
+
+    public function test_owner_cannot_remove_all_photos_without_adding_new_ones(): void
+    {
+        $owner = User::factory()->create(['role' => 'user']);
+        $ad = $this->makeAd(['user_id' => $owner->id, 'status' => 'approved']);
+        $imageId = $ad->images()->first()->id;
+
+        $this->actingAs($owner)
+            ->from(route('ads.edit', $ad))
+            ->put(route('ads.update', $ad), [
+                'title' => $ad->title,
+                'description' => $ad->description,
+                'price' => $ad->price,
+                'category' => $ad->category,
+                'location' => $ad->location,
+                'contact_email' => $ad->contactEmail(),
+                'contact_phone' => $ad->contactPhone(),
+                'remove_images' => [$imageId],
+            ])
+            ->assertRedirect(route('ads.edit', $ad))
+            ->assertSessionHasErrors('images');
+
+        $this->assertDatabaseHas('ad_images', ['id' => $imageId]);
+    }
+
+    private function beGuest(): self
+    {
+        $this->app['auth']->forgetGuards();
+
+        return $this;
+    }
+
+    private function makeAd(array $overrides = []): Ad
+    {
+        $ad = Ad::factory()->create($overrides);
+        $ad->images()->create(['path' => 'ads/test.jpg']);
+
+        return $ad->fresh(['images']);
     }
 }

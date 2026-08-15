@@ -3,15 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\Ad;
-use Illuminate\Http\Request;
 
 class AdminController extends Controller
 {
     public function dashboard()
     {
-        $ads = Ad::with('user')->latest()->get();
+        $pendingAds = Ad::with('user')->where('status', 'pending')->latest()->get();
+        $reviewedAds = Ad::with('user')->whereIn('status', ['approved', 'rejected'])->latest()->get();
 
-        return view('admin.dashboard', compact('ads'));
+        return view('admin.dashboard', compact('pendingAds', 'reviewedAds'));
     }
 
     public function approve(Ad $ad)

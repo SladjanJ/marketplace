@@ -8,6 +8,8 @@ class ProfileController extends Controller
 {
     public function show(): View
     {
-        return view('profile.show');
+        $ads = auth()->user()->ads()->with('images')->latest()->get();
+
+        return view('profile.show', compact('ads'));
     }
 }

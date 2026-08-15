@@ -19,7 +19,7 @@ class AdFactory extends Factory
             'price' => $this->faker->numberBetween(100, 5000),
             'category' => 'sale',
             'location' => $this->faker->city(),
-            'contact_info' => $this->faker->email(),
+            'contact_info' => $this->faker->safeEmail().' · '.$this->faker->numerify('06########'),
             'status' => 'pending',
         ];
     }

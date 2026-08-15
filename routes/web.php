@@ -34,8 +34,14 @@ Route::post('/logout', [AuthController::class, 'logout'])
 Route::middleware('auth')->group(function () {
     Route::get('/ads/create', [AdController::class, 'create'])->name('ads.create');
     Route::post('/ads', [AdController::class, 'store'])->name('ads.store');
+    Route::get('/ads/{ad}/edit', [AdController::class, 'edit'])->name('ads.edit');
+    Route::put('/ads/{ad}', [AdController::class, 'update'])->name('ads.update');
+    Route::patch('/ads/{ad}/status', [AdController::class, 'updateStatus'])->name('ads.status');
+    Route::delete('/ads/{ad}', [AdController::class, 'destroy'])->name('ads.destroy');
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
 });
+
+Route::get('/ads/{ad}', [AdController::class, 'show'])->name('ads.show');
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
