@@ -45,11 +45,18 @@ class AdController extends Controller
     {
         return view('ads.create', [
             'categories' => Ad::CATEGORIES,
+            'dailyLimitReached' => auth()->user()->hasReachedDailyAdLimit(),
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
+        if ($request->user()->hasReachedDailyAdLimit()) {
+            return redirect()
+                ->route('ads.create')
+                ->with('error', __('ui.daily_ad_limit'));
+        }
+
         $validated = $this->validatedAd($request, imagesRequired: true);
 
         $ad = $request->user()->ads()->create([

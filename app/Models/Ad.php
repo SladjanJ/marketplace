@@ -16,6 +16,8 @@ class Ad extends Model
         'services',
     ];
 
+    public const DAILY_LIMIT = 2;
+
     public const OWNER_STATUS_TRANSITIONS = [
         'approved' => ['paused', 'sold'],
         'paused' => ['approved', 'sold'],

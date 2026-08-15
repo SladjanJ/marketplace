@@ -37,6 +37,7 @@ return [
     'save_changes' => 'Save changes',
     'cancel' => 'Cancel',
     'ad_submitted' => 'Your ad was submitted and is waiting for approval. You can find it under Your ads until it goes live.',
+    'daily_ad_limit' => 'You can post up to 2 ads per day. Try again tomorrow.',
     'ad_updated' => 'Your ad was updated.',
     'ad_deleted' => 'Your ad was deleted.',
     'edit_ad_title' => 'Edit ad',

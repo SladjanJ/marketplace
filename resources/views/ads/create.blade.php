@@ -13,7 +13,11 @@
 
         <div class="card border-0 shadow-sm">
             <div class="card-body p-4">
-                @include('ads.form', ['ad' => null, 'categories' => $categories])
+                @if($dailyLimitReached)
+                    <div class="alert alert-warning mb-0">{{ __('ui.daily_ad_limit') }}</div>
+                @else
+                    @include('ads.form', ['ad' => null, 'categories' => $categories])
+                @endif
             </div>
         </div>
     </div>

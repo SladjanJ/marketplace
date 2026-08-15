@@ -52,4 +52,16 @@ class User extends Authenticatable
     {
         return $this->hasMany(Ad::class);
     }
+
+    public function adsCreatedTodayCount(): int
+    {
+        return $this->ads()
+            ->whereDate('created_at', today())
+            ->count();
+    }
+
+    public function hasReachedDailyAdLimit(): bool
+    {
+        return $this->adsCreatedTodayCount() >= Ad::DAILY_LIMIT;
+    }
 }

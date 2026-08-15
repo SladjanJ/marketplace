@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
@@ -112,6 +113,85 @@ class MarketplaceTest extends TestCase
             ->assertOk()
             ->assertSee('Create a new ad')
             ->assertSee('Submit for review');
+    }
+
+    public function test_user_cannot_create_more_than_two_ads_per_day(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create(['role' => 'user']);
+        $this->makeAd(['user_id' => $user->id]);
+        $this->makeAd(['user_id' => $user->id]);
+
+        $this->actingAs($user)
+            ->get(route('ads.create'))
+            ->assertOk()
+            ->assertSee('You can post up to 2 ads per day')
+            ->assertDontSee('Submit for review');
+
+        $this->actingAs($user)
+            ->from(route('ads.create'))
+            ->post('/ads', $this->newAdPayload(['title' => 'Third bike']))
+            ->assertRedirect(route('ads.create'))
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseCount('ads', 2);
+        $this->assertDatabaseMissing('ads', ['title' => 'Third bike']);
+    }
+
+    public function test_ads_from_previous_days_do_not_count_toward_daily_limit(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create(['role' => 'user']);
+
+        Carbon::setTestNow(now()->subDay());
+        $this->makeAd(['user_id' => $user->id]);
+        $this->makeAd(['user_id' => $user->id]);
+        Carbon::setTestNow();
+
+        $this->actingAs($user)
+            ->get(route('ads.create'))
+            ->assertOk()
+            ->assertSee('Submit for review');
+
+        $this->actingAs($user)
+            ->post('/ads', $this->newAdPayload(['title' => 'Today bike']))
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('ads', [
+            'user_id' => $user->id,
+            'title' => 'Today bike',
+        ]);
+        $this->assertSame(3, $user->ads()->count());
+    }
+
+    public function test_updating_an_ad_does_not_count_toward_daily_limit(): void
+    {
+        $owner = User::factory()->create(['role' => 'user']);
+        $this->makeAd(['user_id' => $owner->id]);
+        $ad = $this->makeAd([
+            'user_id' => $owner->id,
+            'status' => 'approved',
+            'title' => 'Old title',
+        ]);
+
+        $this->actingAs($owner)->put(route('ads.update', $ad), [
+            'title' => 'Updated title',
+            'description' => $ad->description,
+            'price' => $ad->price,
+            'category' => $ad->category,
+            'location' => $ad->location,
+            'contact_email' => $ad->contactEmail(),
+            'contact_phone' => $ad->contactPhone(),
+        ])->assertRedirect(route('ads.show', $ad));
+
+        $this->assertDatabaseHas('ads', [
+            'id' => $ad->id,
+            'title' => 'Updated title',
+        ]);
+        $this->assertTrue($owner->fresh()->hasReachedDailyAdLimit());
+        $this->assertSame(2, $owner->ads()->count());
     }
 
     public function test_home_page_shows_create_ad_call_to_action(): void
@@ -702,6 +782,26 @@ class MarketplaceTest extends TestCase
         $this->app['auth']->forgetGuards();
 
         return $this;
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    private function newAdPayload(array $overrides = []): array
+    {
+        return array_merge([
+            'title' => 'Vintage bike',
+            'description' => 'Great condition',
+            'price' => 120,
+            'category' => 'sale',
+            'location' => 'Belgrade',
+            'contact_email' => 'seller@example.com',
+            'contact_phone' => '0601234567',
+            'images' => [
+                UploadedFile::fake()->create('bike-1.jpg', 100, 'image/jpeg'),
+            ],
+        ], $overrides);
     }
 
     private function makeAd(array $overrides = []): Ad

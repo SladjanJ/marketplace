@@ -37,6 +37,7 @@ return [
     'save_changes' => 'Sačuvaj izmene',
     'cancel' => 'Otkaži',
     'ad_submitted' => 'Tvoj oglas je poslat i čeka odobrenje. Možeš ga naći pod Tvoji oglasi dok ne bude javno objavljen.',
+    'daily_ad_limit' => 'Možeš objaviti najviše 2 oglasa dnevno. Pokušaj sutra.',
     'ad_updated' => 'Oglas je ažuriran.',
     'ad_deleted' => 'Oglas je obrisan.',
     'edit_ad_title' => 'Izmeni oglas',
