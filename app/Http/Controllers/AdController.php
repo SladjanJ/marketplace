@@ -17,7 +17,7 @@ class AdController extends Controller
     {
         $filters = $this->validatedListingFilters($request);
 
-        $ads = Ad::with('images')
+        $ads = Ad::with('coverImage')
             ->where('status', 'approved')
             ->filtered($filters)
             ->sorted($filters['sort'] ?? 'newest')
@@ -33,15 +33,13 @@ class AdController extends Controller
 
         if ($user = auth()->user()) {
             $myAds = $user->ads()
-                ->with('images')
+                ->with('coverImage')
                 ->where('status', '!=', 'approved')
                 ->latest()
                 ->get();
         }
 
-        $locations = Cities::catalog(
-            Ad::query()->where('status', 'approved')->pluck('location')->all()
-        );
+        $locations = Cities::catalog();
 
         return view('ads.index', [
             'ads' => $ads,

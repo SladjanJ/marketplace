@@ -222,6 +222,7 @@ Copy `.env.example` to `.env`. **Never commit `.env`.**
 | `APP_NAME` | Yes | App name (default `PlaceMarket`) |
 | `APP_KEY` | Yes | `php artisan key:generate` |
 | `APP_URL` | Yes | Local: `http://127.0.0.1:8000` — must match how you open the app (images and password-reset links use this) |
+| `APP_DEBUG` | Yes | `true` locally; **`false` in production** |
 | `APP_LOCALE` | No | Fallback locale (`en`) |
 | `DB_CONNECTION` | Yes | `mysql` |
 | `DB_HOST` | Yes | `127.0.0.1` |
@@ -229,6 +230,7 @@ Copy `.env.example` to `.env`. **Never commit `.env`.**
 | `DB_DATABASE` | Yes | `marketplace` |
 | `DB_USERNAME` | Yes | Usually `root` locally |
 | `DB_PASSWORD` | Yes | Local XAMPP is often empty |
+| `SESSION_SECURE_COOKIE` | No | `false` locally; **`true` in production (HTTPS)** |
 | `MAIL_MAILER` | Yes | `log` for local (writes to `storage/logs`), or SMTP / Resend for real reset emails |
 | `MAIL_FROM_ADDRESS` | Yes (SMTP) | Sender address |
 | `MAIL_PASSWORD` | Yes (SMTP) | SMTP / Resend API key — **never commit** |
@@ -252,6 +254,7 @@ Without SMTP, password-reset emails are written to the log (`MAIL_MAILER=log`). 
 | `0001_01_01_000002` | Jobs tables |
 | `2026_08_09_000000` | `ads`, `ad_images` |
 | `2026_08_14_000000` | `users.locale`; normalize category values to `sale` / `services` |
+| `2026_08_15_000000` | Indexes on `ads` (`status`, `category`, `price`, `location`, `user_id`) |
 
 **Tables**
 
@@ -291,11 +294,13 @@ After `php artisan migrate --seed`:
 - **`auth`** middleware on create / edit / delete / profile
 - **`admin`** middleware (`EnsureAdmin`) on `/admin/*` — non-admins get 403
 - **`AdPolicy`** for view, update, delete, and owner status transitions
+- Rate limits on login, register, password reset, and ad creation
+- HTTPS URLs forced when `APP_ENV=production`
 - Server-side validation on ads, auth, locale, and password reset
 - Daily ad limit enforced in the controller, not only in the UI
 - Guests cannot read contact details
 - Uploaded images stored on the `public` disk; max 4 files, image MIME types only
-- `.gitignore` excludes `.env`, vendor, and local tooling
+- `.gitignore` excludes `.env`, secrets, dumps, logs, vendor, and local tooling
 
 ---
 

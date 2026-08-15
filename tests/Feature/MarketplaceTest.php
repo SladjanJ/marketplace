@@ -308,13 +308,10 @@ class MarketplaceTest extends TestCase
 
     public function test_home_page_includes_location_catalog_for_autocomplete(): void
     {
-        Ad::factory()->create(['title' => 'Custom town bike', 'location' => 'Kolašin', 'status' => 'approved']);
-
         $this->get(route('ads.index'))
             ->assertOk()
             ->assertSee('location-cities', false)
             ->assertSee('Podgorica', false)
-            ->assertSee('Kolašin', false)
             ->assertSee('location-suggestions', false);
     }
 

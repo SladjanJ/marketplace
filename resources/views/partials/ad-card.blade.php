@@ -1,6 +1,6 @@
 <a href="{{ route('ads.show', $ad) }}" class="card h-100 border-0 shadow-sm ad-list-card">
-    @if($ad->images->isNotEmpty())
-        <img src="{{ asset('storage/' . $ad->images->first()->path) }}" class="card-img-top ad-card-img" alt="{{ $ad->title }}">
+    @if($ad->coverImage)
+        <img src="{{ asset('storage/' . $ad->coverImage->path) }}" class="card-img-top ad-card-img" alt="{{ $ad->title }}">
     @endif
     <div class="card-body">
         @if($showStatus ?? false)

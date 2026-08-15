@@ -28,5 +28,9 @@ class AppServiceProvider extends ServiceProvider
         if ($root = config('app.url')) {
             URL::forceRootUrl(rtrim($root, '/'));
         }
+
+        if ($this->app->environment('production')) {
+            URL::forceScheme('https');
+        }
     }
 }

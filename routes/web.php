@@ -13,9 +13,9 @@ Route::post('/locale', [LocaleController::class, 'update'])->name('locale.update
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
     Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
-    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1');
 
     Route::get('/forgot-password', [PasswordResetController::class, 'create'])->name('password.request');
     Route::post('/forgot-password', [PasswordResetController::class, 'store'])
@@ -33,7 +33,9 @@ Route::post('/logout', [AuthController::class, 'logout'])
 
 Route::middleware('auth')->group(function () {
     Route::get('/ads/create', [AdController::class, 'create'])->name('ads.create');
-    Route::post('/ads', [AdController::class, 'store'])->name('ads.store');
+    Route::post('/ads', [AdController::class, 'store'])
+        ->middleware('throttle:10,1')
+        ->name('ads.store');
     Route::get('/ads/{ad}/edit', [AdController::class, 'edit'])->name('ads.edit');
     Route::put('/ads/{ad}', [AdController::class, 'update'])->name('ads.update');
     Route::patch('/ads/{ad}/status', [AdController::class, 'updateStatus'])->name('ads.status');
