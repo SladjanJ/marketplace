@@ -50,10 +50,15 @@ RUN composer install \
 
 COPY . .
 
-RUN composer dump-autoload --optimize --no-dev --ignore-platform-reqs \
-    && mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
-    && chmod -R 775 storage bootstrap/cache
+RUN mkdir -p \
+        storage/framework/cache/data \
+        storage/framework/sessions \
+        storage/framework/views \
+        storage/logs \
+        bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache \
+    && composer dump-autoload --optimize --no-dev --no-scripts --ignore-platform-reqs
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "php artisan storage:link --force && php artisan migrate --force --seed && php artisan serve --host 0.0.0.0 --port ${PORT:-8080}"]
+CMD ["sh", "-c", "php artisan package:discover --ansi && php artisan storage:link --force && php artisan migrate --force --seed && php artisan serve --host 0.0.0.0 --port ${PORT:-8080}"]
