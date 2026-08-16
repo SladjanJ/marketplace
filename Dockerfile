@@ -2,14 +2,33 @@ FROM php:8.2-cli-bookworm
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
+        curl \
         unzip \
+        ca-certificates \
         libpq-dev \
         libpng-dev \
         libjpeg62-turbo-dev \
         libfreetype6-dev \
         libzip-dev \
+        libonig-dev \
+        libxml2-dev \
+        libcurl4-openssl-dev \
+        libicu-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) pdo pdo_mysql pdo_pgsql gd zip bcmath opcache \
+    && docker-php-ext-install -j$(nproc) \
+        pdo \
+        pdo_mysql \
+        pdo_pgsql \
+        mbstring \
+        xml \
+        curl \
+        intl \
+        gd \
+        zip \
+        bcmath \
+        opcache \
+        exif \
+        pcntl \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
@@ -17,7 +36,8 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/html
 
 ENV COMPOSER_ALLOW_SUPERUSER=1 \
-    COMPOSER_MEMORY_LIMIT=-1
+    COMPOSER_MEMORY_LIMIT=-1 \
+    COMPOSER_NO_INTERACTION=1
 
 COPY composer.json composer.lock ./
 RUN composer install \
@@ -25,11 +45,12 @@ RUN composer install \
         --no-scripts \
         --no-autoloader \
         --prefer-dist \
-        --no-interaction
+        --no-interaction \
+        --ignore-platform-reqs
 
 COPY . .
 
-RUN composer dump-autoload --optimize --no-dev \
+RUN composer dump-autoload --optimize --no-dev --ignore-platform-reqs \
     && mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
